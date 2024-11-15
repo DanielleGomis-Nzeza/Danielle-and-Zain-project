@@ -1,5 +1,13 @@
 const express = require('express');
-const methodOverride = require('method-override');  // Import method-override
+const session = require('express-session');
+const flash = require('connect-flash');
+const methodOverride = require('method-override');
+const passport = require('passport');
+const { registerUser, checkAuthenticated, checkNotAuthenticated } = require('./auth');
+const LocalStrategy = require('passport-local').Strategy;
+const bcrypt = require('bcrypt');
+const User = require('../models/User');  // Adjust the path according to your project structure
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -7,8 +15,8 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Enable method override for supporting PUT and DELETE in forms
-app.use(methodOverride('_method'));  // Add this line
+// Enable method override for PUT and DELETE in forms
+app.use(methodOverride('_method'));
 
 // Serve static files from the 'public' directory
 app.use(express.static('public'));
@@ -16,18 +24,97 @@ app.use(express.static('public'));
 // Set EJS as the templating engine
 app.set('view engine', 'ejs');
 
+// Session and flash middleware
+app.use(
+    session({
+        secret: 'secret',
+        resave: false,
+        saveUninitialized: false,
+    })
+);
+app.use(flash());
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Global variable for authentication state
+app.use((req, res, next) => {
+    res.locals.isAuthenticated = req.isAuthenticated();
+    next();
+});
+
 // In-memory data store for surveys
 let surveys = [];
 
-// CREATE Survey
-app.post('/surveys', (req, res) => {
+// Passport Local Strategy for user authentication
+passport.use(new LocalStrategy(
+    { usernameField: 'email' },  // Assuming login is with email, adjust if using username
+    (email, password, done) => {
+        // Find user by email
+        User.findOne({ email: email }, (err, user) => {
+            if (err) return done(err);
+            if (!user) return done(null, false, { message: 'No user found' });
+
+            // Compare password
+            bcrypt.compare(password, user.password, (err, isMatch) => {
+                if (err) return done(err);
+                if (isMatch) {
+                    return done(null, user);
+                } else {
+                    return done(null, false, { message: 'Incorrect password' });
+                }
+            });
+        });
+    }
+));
+
+// Serialize and deserialize user for session management
+passport.serializeUser((user, done) => {
+    done(null, user.id);
+});
+
+passport.deserializeUser((id, done) => {
+    User.findById(id, (err, user) => {
+        done(err, user);
+    });
+});
+
+// Home route
+app.get('/', (req, res) => {
+    res.render('index', { surveys, user: req.user });
+});
+
+// Register routes
+app.get('/register', checkNotAuthenticated, (req, res) => res.render('register'));
+app.post('/register', checkNotAuthenticated, registerUser);
+
+// Login routes
+app.get('/login', checkNotAuthenticated, (req, res) => res.render('login', { message: req.flash('error') }));
+app.post(
+    '/login',
+    checkNotAuthenticated,
+    passport.authenticate('local', {
+        successRedirect: '/',
+        failureRedirect: '/login',
+        failureFlash: true,
+    })
+);
+
+// Logout route
+app.post('/logout', (req, res, next) => {
+    req.logout(err => {
+        if (err) return next(err);
+        res.redirect('/login');
+    });
+});
+
+// CRUD routes for surveys (protected)
+app.post('/surveys', checkAuthenticated, (req, res) => {
     const newSurvey = { id: Date.now(), title: req.body.title, status: 'Active' };
     surveys.push(newSurvey);
     res.redirect('/');
 });
 
-// READ Survey
-app.get('/surveys/:id', (req, res) => {
+app.get('/surveys/:id', checkAuthenticated, (req, res) => {
     const survey = surveys.find(s => s.id === parseInt(req.params.id));
     if (survey) {
         res.render('survey-details', { survey });
@@ -36,8 +123,7 @@ app.get('/surveys/:id', (req, res) => {
     }
 });
 
-// UPDATE Survey
-app.put('/surveys/:id', (req, res) => {
+app.put('/surveys/:id', checkAuthenticated, (req, res) => {
     const survey = surveys.find(s => s.id === parseInt(req.params.id));
     if (survey) {
         survey.title = req.body.title;
@@ -47,15 +133,9 @@ app.put('/surveys/:id', (req, res) => {
     }
 });
 
-// DELETE Survey
-app.delete('/surveys/:id', (req, res) => {
+app.delete('/surveys/:id', checkAuthenticated, (req, res) => {
     surveys = surveys.filter(s => s.id !== parseInt(req.params.id));
     res.redirect('/');
-});
-
-// Basic route to render list of surveys
-app.get('/', (req, res) => {
-    res.render('index', { surveys });
 });
 
 // Start the server
