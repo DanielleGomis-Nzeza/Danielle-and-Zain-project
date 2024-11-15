@@ -6,10 +6,19 @@ const passport = require('passport');
 const { registerUser, checkAuthenticated, checkNotAuthenticated } = require('./auth');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
+const mongoose = require('mongoose');  // Add mongoose for DB connection
 const User = require('../models/User');  // Adjust the path according to your project structure
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Connect to MongoDB (add this line to connect to the database)
+mongoose.connect('mongodb://localhost:27017/your_db_name', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+.then(() => console.log('Connected to MongoDB'))
+.catch((err) => console.log('MongoDB connection error:', err));
 
 // Middleware for parsing JSON and URL-encoded data
 app.use(express.json());
@@ -42,7 +51,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// In-memory data store for surveys
+// In-memory data store for surveys (consider using MongoDB in the future)
 let surveys = [];
 
 // Passport Local Strategy for user authentication
