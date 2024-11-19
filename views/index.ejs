@@ -19,15 +19,18 @@
             color: white;
             border-bottom: 5px solid #ffffff;
         }
+
         .hero-section h1 {
             font-size: 3rem;
             font-weight: 700;
             margin-bottom: 20px;
         }
+
         .hero-section p {
             font-size: 1.5rem;
             margin-bottom: 30px;
         }
+
         .hero-btn {
             padding: 15px 30px;
             font-size: 1.25rem;
@@ -37,45 +40,56 @@
             transition: all 0.3s ease;
             box-shadow: 0px 15px 25px rgba(0, 0, 0, 0.1);
         }
+
         .hero-btn:hover {
             background-color: #ff9800;
             transform: translateY(-5px);
             box-shadow: 0px 20px 35px rgba(0, 0, 0, 0.2);
         }
+
         .navbar {
             background-color: #343a40;
         }
+
         .navbar a {
             color: white;
         }
+
         .navbar a:hover {
             color: #ffc107;
         }
+
         .navbar-brand {
             font-size: 1.75rem;
         }
+
         .survey-table th, .survey-table td {
             text-align: center;
             vertical-align: middle;
         }
+
         .action-btn {
             border-radius: 50px;
             padding: 8px 20px;
             margin: 2px;
             transition: all 0.3s ease;
         }
+
         .btn-update {
             background-color: #007bff;
             color: white;
         }
+
         .btn-update:hover {
             background-color: #0056b3;
             transform: translateY(-2px);
         }
+
         .btn-delete {
             background-color: #dc3545;
             color: white;
         }
+
         .btn-delete:hover {
             background-color: #c82333;
             transform: translateY(-2px);
@@ -101,18 +115,15 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/create-survey">Create Survey</a>
                     </li>
-                    <% if (!isAuthenticated) { %>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/login">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/register">Register</a>
-                        </li>
-                    <% } else { %>
+                    <% if (isAuthenticated) { %>
                         <li class="nav-item">
                             <form action="/logout" method="POST" style="display:inline;">
                                 <button type="submit" class="btn btn-link nav-link" style="display:inline; color: white;">Logout</button>
                             </form>
+                        </li>
+                    <% } else { %>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/login">Login</a>
                         </li>
                     <% } %>
                 </ul>
@@ -131,7 +142,7 @@
 
     <!-- Survey List Table -->
     <div class="container my-5">
-        <h2>Surveys</h2>
+        <h2>Active Surveys</h2>
         <table class="table table-bordered survey-table">
             <thead class="thead-light">
                 <tr>
@@ -154,11 +165,69 @@
                         <button type="button" class="btn btn-delete action-btn" data-bs-toggle="modal" data-bs-target="#deleteModal001">Delete</button>
                     </td>
                 </tr>
-                <!-- Repeat similar survey rows... -->
+                <tr>
+                    <td>002</td>
+                    <td>Employee Engagement</td>
+                    <td>Collects insights on employee satisfaction and workplace environment.</td>
+                    <td>Draft</td>
+                    <td>
+                        <a href="/surveys/002/edit" class="btn btn-update action-btn">Update</a>
+                        <button type="button" class="btn btn-delete action-btn" data-bs-toggle="modal" data-bs-target="#deleteModal002">Delete</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>003</td>
+                    <td>Product Review</td>
+                    <td>Gathers feedback on the new product's features and performance from users.</td>
+                    <td>Published</td>
+                    <td>
+                        <a href="/surveys/003/edit" class="btn btn-update action-btn">Update</a>
+                        <button type="button" class="btn btn-delete action-btn" data-bs-toggle="modal" data-bs-target="#deleteModal003">Delete</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>004</td>
+                    <td>Community Outreach</td>
+                    <td>Assesses community needs and gathers ideas for local development projects.</td>
+                    <td>Active</td>
+                    <td>
+                        <a href="/surveys/004/edit" class="btn btn-update action-btn">Update</a>
+                        <button type="button" class="btn btn-delete action-btn" data-bs-toggle="modal" data-bs-target="#deleteModal004">Delete</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>005</td>
+                    <td>Event Feedback</td>
+                    <td>Collects responses from attendees to evaluate the success of recent events.</td>
+                    <td>Closed</td>
+                    <td>
+                        <a href="/surveys/005/edit" class="btn btn-update action-btn">Update</a>
+                        <button type="button" class="btn btn-delete action-btn" data-bs-toggle="modal" data-bs-target="#deleteModal005">Delete</button>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
-
+     
+     <!-- Delete Confirmation Modals for Each Survey -->
+     <div class="modal fade" id="deleteModal001" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">Are you sure you want to delete the "Customer Feedback" survey?</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="/surveys/001?_method=DELETE" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Bootstrap JS (Required for navbar toggle and modals) -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
