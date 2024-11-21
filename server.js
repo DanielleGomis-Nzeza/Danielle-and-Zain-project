@@ -7,7 +7,7 @@ const { registerUser, checkAuthenticated, checkNotAuthenticated } = require('./a
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');  // Add mongoose for DB connection
-const user = require('./models/user');  // Adjust the path according to your project structure
+const User = require('./models/User');  // Adjust the path according to your project structure
 
 const app = express();
 const PORT = process.env.PORT || 5000;
