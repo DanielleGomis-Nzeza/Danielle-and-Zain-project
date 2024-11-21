@@ -1,3 +1,4 @@
+
 const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
@@ -13,9 +14,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB (add this line to connect to the database)
-mongoose.connect('mongodb://localhost:27017/your_db_name', {
+mongoose.connect('mongodb://localhost:27017/project_db', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000, // Increase timeout to 30 seconds
 })
 .then(() => console.log('Connected to MongoDB'))
 .catch((err) => console.log('MongoDB connection error:', err));
@@ -56,23 +58,25 @@ let surveys = [];
 
 // Passport Local Strategy for user authentication
 passport.use(new LocalStrategy(
-    { usernameField: 'email' },  // Assuming login is with email, adjust if using username
-    (email, password, done) => {
-        // Find user by email
-        User.findOne({ email: email }, (err, user) => {
-            if (err) return done(err);
-            if (!user) return done(null, false, { message: 'No user found' });
+    { usernameField: 'email' }, // Assuming login is with email
+    async (email, password, done) => {
+        try {
+            // Find the user by email
+            const user = await User.findOne({ email: email });
+            if (!user) {
+                return done(null, false, { message: 'No user found' });
+            }
 
-            // Compare password
-            bcrypt.compare(password, user.password, (err, isMatch) => {
-                if (err) return done(err);
-                if (isMatch) {
-                    return done(null, user);
-                } else {
-                    return done(null, false, { message: 'Incorrect password' });
-                }
-            });
-        });
+            // Compare the entered password with the stored hash
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (isMatch) {
+                return done(null, user);
+            } else {
+                return done(null, false, { message: 'Incorrect password' });
+            }
+        } catch (err) {
+            return done(err);
+        }
     }
 ));
 
@@ -89,6 +93,7 @@ passport.deserializeUser((id, done) => {
 
 // Home route
 app.get('/', (req, res) => {
+    console.log('Home route accessed');
     res.render('index', { surveys, user: req.user });
 });
 
