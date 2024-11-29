@@ -162,35 +162,42 @@
                         <td><%= survey.status %></td>
                         <td>
                             <a href="/surveys/<%= survey._id %>" class="btn btn-info">View</a>
-                            <form action="/surveys/<%= survey._id %>?_method=DELETE" method="POST" style="display: inline;">
-                                <button type="submit" class="btn btn-danger">Delete</button>
-                            </form>
+                            <a href="/surveys/<%= survey._id %>/edit" class="btn btn-warning">Edit</a>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal<%= survey._id %>">
+                                Delete
+                            </button>
                         </td>
+                        
                     </tr>
+            
+                    <!-- Delete Confirmation Modal -->
+                    <div class="modal fade" id="deleteModal<%= survey._id %>" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Are you sure you want to delete the survey titled "<%= survey.title %>"?
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <form action="/surveys/<%= survey._id %>?_method=DELETE" method="POST">
+                                        <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 <% }); %>
             </tbody>
+            
             
         </table>
     </div>
      
-     <!-- Delete Confirmation Modals for Each Survey -->
-     <div class="modal fade" id="deleteModal001" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">Are you sure you want to delete the "Customer Feedback" survey?</div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <form action="/surveys/001?_method=DELETE" method="POST" style="display: inline;">
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+
     
     <!-- Bootstrap JS (Required for navbar toggle and modals) -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>

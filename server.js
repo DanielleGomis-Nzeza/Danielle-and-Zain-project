@@ -128,6 +128,37 @@ app.delete('/surveys/:id', checkAuthenticated, async (req, res) => {
     }
 });
 
+// Edit survey route
+app.get('/surveys/:id/edit', checkAuthenticated, async (req, res) => {
+    try {
+        const survey = await Survey.findOne({ _id: req.params.id, user: req.user.id });
+        if (!survey) {
+            return res.status(404).send('Survey not found.');
+        }
+        res.render('edit-survey', { survey });
+    } catch (err) {
+        res.status(500).send('Error loading survey for editing.');
+    }
+});
+
+// Update survey route
+app.put('/surveys/:id', checkAuthenticated, async (req, res) => {
+    try {
+        const survey = await Survey.findOneAndUpdate(
+            { _id: req.params.id, user: req.user.id },
+            { title: req.body.title, description: req.body.description, status: req.body.status },
+            { new: true },
+        );
+        if (!survey) {
+            return res.status(404).send('Survey not found.');
+        }
+        res.redirect('/');
+    } catch (err) {
+        res.status(500).send('Error updating survey.');
+    }
+});
+
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
