@@ -14,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, {
+mongoose.connect("mongodb+srv://amazaingAdmin:mcJQzHFjVoLfjrlC@cluster0.fr5wl.mongodb.net/project_db", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     serverSelectionTimeoutMS: 5000,
@@ -29,7 +29,7 @@ app.use(methodOverride('_method'));
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 app.use(session({
-    secret: process.env.SESSION_SECRET,
+    secret: "secret",
     resave: false,
     saveUninitialized: false,
 }));
