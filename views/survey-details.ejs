@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Survey</title>
+    <title>Survey Details</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -19,8 +19,8 @@
             color: white !important;
         }
 
-        .form-container {
-            max-width: 600px;
+        .details-container {
+            max-width: 800px;
             margin: 50px auto;
             background-color: white;
             padding: 30px;
@@ -65,29 +65,43 @@
         </div>
     </nav>
 
-    <!-- Form Container -->
-    <div class="form-container">
-        <h2 class="text-center">Create a New Survey</h2>
-        <form action="/surveys" method="POST">
-            <div class="mb-3">
-                <label for="title" class="form-label">Survey Title</label>
-                <input type="text" id="title" name="title" class="form-control" placeholder="Enter survey title" required>
+    <!-- Details Container -->
+    <div class="details-container">
+        <h2 class="text-center">Survey Details</h2>
+        <p><strong>ID:</strong> <%= survey._id %></p>
+        <p><strong>Title:</strong> <%= survey.title %></p>
+        <p><strong>Description:</strong> <%= survey.description %></p>
+        <p><strong>Status:</strong> <%= survey.status %></p>
+        <div class="mt-4 text-center">
+            <a href="/" class="btn btn-secondary">Back to Surveys</a>
+            <a href="/surveys/<%= survey._id %>/edit" class="btn btn-warning">Edit Survey</a>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal<%= survey._id %>">
+                Delete Survey
+            </button>
+        </div>
+        
+        
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal<%= survey._id %>" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to delete this survey titled "<%= survey.title %>"?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form action="/surveys/<%= survey._id %>?_method=DELETE" method="POST">
+                            <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                        </form>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="description" class="form-label">Description</label>
-                <textarea id="description" name="description" class="form-control" rows="4" placeholder="Enter survey description"></textarea>
-            </div>
-            <div class="mb-3">
-                <label for="status" class="form-label">Status</label>
-                <select id="status" name="status" class="form-control">
-                    <option value="Active">Active</option>
-                    <option value="Draft">Draft</option>
-                    <option value="Published">Published</option>
-                    <option value="Closed">Closed</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Create Survey</button>
-        </form>
+        </div>
+        
     </div>
 
     <!-- Footer -->
