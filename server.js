@@ -37,6 +37,11 @@ app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
 
+
+// Route protection for authenticated pages
+app.use('/surveys', checkAuthenticated, surveyRoutes);
+
+
 // Global variables
 app.use((req, res, next) => {
     res.locals.isAuthenticated = req.isAuthenticated();
@@ -56,6 +61,13 @@ app.get('/', checkAuthenticated, async (req, res) => {
 
 app.get('/register', checkNotAuthenticated, (req, res) => res.render('register'));
 app.post('/register', checkNotAuthenticated, registerUser);
+
+
+// Home route - public and accessible without logging in
+app.get('/', (req, res) => {
+    console.log('Home route accessed');
+    res.render('index', { surveys, user: req.user }); 
+});
 
 app.get('/login', checkNotAuthenticated, (req, res) => res.render('login', { message: req.flash('error') }));
 app.post('/login', checkNotAuthenticated, passport.authenticate('local', {
