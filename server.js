@@ -5,16 +5,18 @@ const flash = require('connect-flash');
 const methodOverride = require('method-override');
 const passport = require('passport');
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const MongoStore = require('connect-mongo');
 const { registerUser, checkAuthenticated, checkNotAuthenticated } = require('./auth');
 const User = require('./models/User');
 const Survey = require('./models/Survey');
-
-// Import survey routes
 const surveyRoutes = require('./routes/surveys');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Debug environment variables
+console.log('MONGO_URI:', process.env.MONGO_URI);
+console.log('SESSION_SECRET:', process.env.SESSION_SECRET);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
@@ -23,7 +25,10 @@ mongoose.connect(process.env.MONGO_URI, {
     serverSelectionTimeoutMS: 5000,
 })
     .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.log('MongoDB connection error:', err));
+    .catch(err => {
+        console.error('MongoDB connection error:', err);
+        process.exit(1); // Exit if DB connection fails
+    });
 
 // Middleware
 app.use(express.json());
@@ -35,13 +40,11 @@ app.use(session({
     secret: process.env.SESSION_SECRET || "secret",
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
 }));
 app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
-
-// Route protection for authenticated pages
-app.use('/surveys', checkAuthenticated, surveyRoutes);
 
 // Global variables
 app.use((req, res, next) => {
@@ -50,17 +53,24 @@ app.use((req, res, next) => {
     next();
 });
 
-// Home route - public and accessible without logging in
+// Debugging middleware
+app.use((req, res, next) => {
+    console.log('Request URL:', req.url);
+    console.log('Request Method:', req.method);
+    next();
+});
+
+// Routes
 app.get('/', async (req, res) => {
     try {
         const surveys = req.isAuthenticated() ? await Survey.find({ user: req.user.id }) : [];
         res.render('index', { surveys, user: req.user });
     } catch (err) {
+        console.error('Error loading surveys:', err);
         res.status(500).send('Error loading surveys.');
     }
 });
 
-// Authentication routes
 app.get('/register', checkNotAuthenticated, (req, res) => res.render('register'));
 app.post('/register', checkNotAuthenticated, registerUser);
 
@@ -79,66 +89,7 @@ app.post('/logout', (req, res, next) => {
 });
 
 // Survey routes
-app.get('/create-survey', checkAuthenticated, (req, res) => res.render('create-survey'));
-
-app.post('/surveys', checkAuthenticated, async (req, res) => {
-    try {
-        const newSurvey = new Survey({
-            title: req.body.title,
-            description: req.body.description,
-            status: req.body.status || 'Active',
-            user: req.user.id,
-        });
-        await newSurvey.save();
-        res.redirect('/');
-    } catch (err) {
-        res.status(500).send('Error creating survey.');
-    }
-});
-
-app.get('/surveys/:id', checkAuthenticated, async (req, res) => {
-    try {
-        const survey = await Survey.findOne({ _id: req.params.id, user: req.user.id });
-        if (!survey) return res.status(404).send('Survey not found.');
-        res.render('survey-details', { survey });
-    } catch (err) {
-        res.status(500).send('Error loading survey.');
-    }
-});
-
-app.get('/surveys/:id/edit', checkAuthenticated, async (req, res) => {
-    try {
-        const survey = await Survey.findOne({ _id: req.params.id, user: req.user.id });
-        if (!survey) return res.status(404).send('Survey not found.');
-        res.render('edit-survey', { survey });
-    } catch (err) {
-        res.status(500).send('Error loading survey for editing.');
-    }
-});
-
-app.put('/surveys/:id', checkAuthenticated, async (req, res) => {
-    try {
-        const survey = await Survey.findOneAndUpdate(
-            { _id: req.params.id, user: req.user.id },
-            { title: req.body.title, description: req.body.description, status: req.body.status },
-            { new: true }
-        );
-        if (!survey) return res.status(404).send('Survey not found.');
-        res.redirect('/');
-    } catch (err) {
-        res.status(500).send('Error updating survey.');
-    }
-});
-
-app.delete('/surveys/:id', checkAuthenticated, async (req, res) => {
-    try {
-        const survey = await Survey.findOneAndDelete({ _id: req.params.id, user: req.user.id });
-        if (!survey) return res.status(404).send('Survey not found.');
-        res.redirect('/');
-    } catch (err) {
-        res.status(500).send('Error deleting survey.');
-    }
-});
+app.use('/surveys', checkAuthenticated, surveyRoutes);
 
 // Start the server
 app.listen(PORT, () => {
