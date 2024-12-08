@@ -1,2 +1,5 @@
 node_modules
 .env
+MONGO_URI=mongodb://localhost:27017/project_db
+SESSION_SECRET=b3884e85e7868751d6ff7c296614336f6be0865dcd964ad95396e0048b98f022
+PORT=5000
