@@ -7,8 +7,9 @@ const passport = require('passport');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 const { registerUser, checkAuthenticated, checkNotAuthenticated } = require('./auth');
-const surveyRoutes = require('./routes/surveys');
+const User = require('./models/User');
 const Survey = require('./models/Survey');
+const surveyRoutes = require('./routes/surveys');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,11 +18,11 @@ const PORT = process.env.PORT || 5000;
 console.log('MONGO_URI:', process.env.MONGO_URI);
 console.log('SESSION_SECRET:', process.env.SESSION_SECRET);
 
-// **MongoDB Connection**
+// Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000, // Wait 5 seconds for MongoDB server response
+    serverSelectionTimeoutMS: 5000,
 })
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => {
@@ -29,46 +30,58 @@ mongoose.connect(process.env.MONGO_URI, {
         process.exit(1); // Exit if DB connection fails
     });
 
-// **Session Configuration**
+
+// Configure session storage
 app.use(session({
     secret: process.env.SESSION_SECRET || 'yourSecretKeyHere',
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     store: MongoStore.create({
-        mongoUrl: process.env.MONGO_URI,
-        collectionName: 'sessions',
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: 'sessions'
     }),
     cookie: {
-        maxAge: 1000 * 60 * 60 * 24, // 1 day
-    },
-}));
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+    }
+  }));
+  
+  app.get('/', (req, res) => {
+    res.send('App is running!');
+  });
+  
 
-// **Middleware**
+
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
-app.use(express.static('public')); // Serve static files
-app.set('view engine', 'ejs'); // Use EJS for views
+app.use(express.static('public'));
+app.set('view engine', 'ejs');
+app.use(session({
+    secret: process.env.SESSION_SECRET || "secret",
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
+}));
 app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
 
-// **Global Variables**
+// Global variables
 app.use((req, res, next) => {
     res.locals.isAuthenticated = req.isAuthenticated();
-    res.locals.user = req.user || null;
-    res.locals.message = req.flash('error');
+    res.locals.user = req.user;
     next();
 });
 
-// **Debugging Middleware**
+// Debugging middleware
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    console.log('Request URL:', req.url);
+    console.log('Request Method:', req.method);
     next();
 });
 
-// **Routes**
-// Index route (homepage)
+// Routes
 app.get('/', async (req, res) => {
     try {
         const surveys = req.isAuthenticated() ? await Survey.find({ user: req.user.id }) : [];
@@ -79,11 +92,9 @@ app.get('/', async (req, res) => {
     }
 });
 
-// Registration routes
 app.get('/register', checkNotAuthenticated, (req, res) => res.render('register'));
 app.post('/register', checkNotAuthenticated, registerUser);
 
-// Login routes
 app.get('/login', checkNotAuthenticated, (req, res) => res.render('login', { message: req.flash('error') }));
 app.post('/login', checkNotAuthenticated, passport.authenticate('local', {
     successRedirect: '/',
@@ -91,7 +102,6 @@ app.post('/login', checkNotAuthenticated, passport.authenticate('local', {
     failureFlash: true,
 }));
 
-// Logout route
 app.post('/logout', (req, res, next) => {
     req.logout(err => {
         if (err) return next(err);
@@ -99,16 +109,95 @@ app.post('/logout', (req, res, next) => {
     });
 });
 
-// Survey routes (protected)
-app.use('/surveys', checkAuthenticated, surveyRoutes);
+app.get('/create-survey', checkAuthenticated, (req, res) => res.render('create-survey'));
 
-// **Error Handling**
-app.use((err, req, res, next) => {
-    console.error('Unhandled Error:', err);
-    res.status(500).send('Internal Server Error');
+app.post('/surveys', checkAuthenticated, async (req, res) => {
+    try {
+        const newSurvey = new Survey({
+            title: req.body.title,
+            description: req.body.description,
+            status: req.body.status || 'Active',
+            user: req.user.id,
+        });
+        await newSurvey.save();
+        res.redirect('/');
+    } catch (err) {
+        res.status(500).send('Error creating survey.');
+    }
 });
 
-// **Start the Server**
+app.get('/surveys/:id', checkAuthenticated, async (req, res) => {
+    try {
+        const survey = await Survey.findOne({ _id: req.params.id, user: req.user.id });
+        if (!survey) {
+            return res.status(404).send('Survey not found.');
+        }
+        res.render('survey-details', { survey });
+    } catch (err) {
+        res.status(500).send('Error loading survey.');
+    }
+});
+
+app.put('/surveys/:id', checkAuthenticated, async (req, res) => {
+    try {
+        const survey = await Survey.findOneAndUpdate(
+            { _id: req.params.id, user: req.user.id },
+            { title: req.body.title, description: req.body.description, status: req.body.status },
+            { new: true },
+        );
+        if (!survey) {
+            return res.status(404).send('Survey not found.');
+        }
+        res.redirect('/');
+    } catch (err) {
+        res.status(500).send('Error updating survey.');
+    }
+});
+
+app.delete('/surveys/:id', checkAuthenticated, async (req, res) => {
+    try {
+        const survey = await Survey.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+        if (!survey) {
+            return res.status(404).send('Survey not found.');
+        }
+        res.redirect('/');
+    } catch (err) {
+        res.status(500).send('Error deleting survey.');
+    }
+});
+
+// Edit survey route
+app.get('/surveys/:id/edit', checkAuthenticated, async (req, res) => {
+    try {
+        const survey = await Survey.findOne({ _id: req.params.id, user: req.user.id });
+        if (!survey) {
+            return res.status(404).send('Survey not found.');
+        }
+        res.render('edit-survey', { survey });
+    } catch (err) {
+        res.status(500).send('Error loading survey for editing.');
+    }
+});
+
+// Update survey route
+app.put('/surveys/:id', checkAuthenticated, async (req, res) => {
+    try {
+        const survey = await Survey.findOneAndUpdate(
+            { _id: req.params.id, user: req.user.id },
+            { title: req.body.title, description: req.body.description, status: req.body.status },
+            { new: true },
+        );
+        if (!survey) {
+            return res.status(404).send('Survey not found.');
+        }
+        res.redirect('/');
+    } catch (err) {
+        res.status(500).send('Error updating survey.');
+    }
+});
+
+
+// Start the server
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
